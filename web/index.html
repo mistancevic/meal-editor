@@ -47,7 +47,12 @@
 
   /* ---------- workspace ---------- */
   main{flex:1;display:grid;grid-template-columns:250px minmax(0,1fr) 290px;gap:0}
-  @media(max-width:1000px){ main{grid-template-columns:1fr} aside{max-height:none} }
+  .sheet-close{display:none;margin-left:auto}
+  aside h3{display:flex;align-items:center;gap:8px}
+  #libFab{display:none;position:fixed;right:14px;bottom:14px;z-index:25;border-radius:999px;padding:10px 16px;
+          background:var(--green-deep);border-color:var(--green-deep);color:#fff;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+  .tr-sel{display:none}
+  .clip,.tr,.ruler{touch-action:none}
   aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column}
   aside.right{border-right:0;border-left:1px solid var(--line)}
   aside h3{margin:0;padding:10px 12px 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -69,7 +74,6 @@
   .center{display:flex;flex-direction:column;min-width:0;min-height:0}
   .monitor{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr)) auto;gap:10px;align-items:center;
            padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
-  @media(max-width:1000px){ .monitor{grid-template-columns:repeat(2,1fr)} }
   .meter{min-width:0}
   .meter .lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
   .meter .lbl b{color:var(--ink);font-weight:600}
@@ -154,7 +158,7 @@
   .rp-head{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--line)}
   .rp-head h2{margin:0;font:600 16px var(--serif)}
   .meal-card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--panel-2)}
-  .meal-card h4{margin:0 0 6px;display:flex;justify-content:space-between;font-weight:600}
+  .meal-card h4{margin:0 0 6px;display:flex;flex-wrap:wrap;gap:2px 10px;justify-content:space-between;font-weight:600}
   .meal-card h4 span:last-child{color:var(--muted);font-weight:400}
   table{border-collapse:collapse;width:100%;font-size:12px}
   td,th{padding:3px 6px;border-bottom:1px dashed var(--line);text-align:right;font-variant-numeric:tabular-nums}
@@ -173,6 +177,35 @@
                 border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin:0;cursor:pointer}
   #pRestr label:has(input:checked){border-color:var(--red);color:var(--red)}
   #pRestr input{margin:0}
+  /* ---------- phone / narrow layout ---------- */
+  @media(max-width:1000px){
+    :root{--head-w:104px}
+    header{padding:8px 10px;gap:6px}
+    header .brand small{display:none}
+    header .group{flex-wrap:wrap}
+    header .spacer{display:none}
+    #demoSel{max-width:132px}
+    #profileChips{flex-wrap:nowrap;overflow-x:auto;max-width:calc(100vw - 120px);scrollbar-width:none}
+    main{grid-template-columns:1fr}
+    .monitor{position:sticky;top:0;z-index:20;grid-template-columns:1fr 1fr;gap:8px 12px;padding:8px 10px}
+    #statusChip{grid-column:1/-1;justify-self:start;max-width:100%;white-space:normal}
+    .mealchips{padding:6px 10px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+    .tl-wrap{max-height:calc(100vh - 150px)}
+    .head{padding:4px 6px;font-size:12px}
+    .head .ctl button{padding:1px 4px;font-size:10px}
+    .head .ctl.tr-btns{display:none}
+    .tr-sel{display:block;width:100%;font-size:11px;padding:2px 4px}
+    aside.left,aside.right{position:fixed;left:0;right:0;bottom:0;z-index:30;max-height:72vh;border:0;border-top:1px solid var(--line);
+      border-radius:14px 14px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.5);transform:translateY(105%);transition:transform .2s;overflow:hidden}
+    aside.open{transform:none}
+    #libList{max-height:none}
+    #inspector{max-height:none;padding-bottom:24px}
+    .sheet-close{display:inline-block}
+    #libFab{display:inline-flex}
+    #renderPanel{max-height:none}
+    #renderPanel .inner{padding:10px;gap:12px}
+    #renderPanel .rp-head{position:sticky;top:0;background:var(--panel);z-index:2}
+  }
   #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#000c;color:#fff;padding:8px 14px;
          border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
   #toast.show{opacity:1}
@@ -199,8 +232,8 @@
 </header>
 
 <main>
-  <aside class="left">
-    <h3>Library</h3>
+  <aside class="left" id="libAside">
+    <h3>Library <button class="icon sheet-close" id="libClose" title="Close">✕</button></h3>
     <input id="libSearch" type="search" placeholder="search ingredients…">
     <div class="tabs" id="libTabs"></div>
     <div id="libList"></div>
@@ -220,8 +253,8 @@
     </div>
   </section>
 
-  <aside class="right">
-    <h3 id="inspTitle">Inspector</h3>
+  <aside class="right" id="inspAside">
+    <h3><span id="inspTitle">Inspector</span> <button class="icon sheet-close" id="inspClose" title="Close">✕</button></h3>
     <div id="inspector"></div>
   </aside>
 </main>
@@ -250,6 +283,7 @@
     </div>
   </div>
 </section>
+<button id="libFab" title="Open the ingredient library">＋ Library</button>
 <dialog id="profileDlg">
   <form method="dialog" id="profileForm">
     <h3 style="margin:0 0 10px;padding:0;text-transform:none;letter-spacing:0;font:600 16px var(--serif);color:var(--ink)">Client profile</h3>
@@ -292,6 +326,18 @@ let libFilter = 'all';
 let uid = 1;
 const newId = p => `${p}${Date.now().toString(36)}${(uid++).toString(36)}`;
 
+// --------------------------------------------------------------- sheets --
+// On narrow screens the library and the inspector are bottom sheets; on a
+// desktop they are side panels and these calls are harmless no-ops.
+const isMobile = () => matchMedia('(max-width:1000px)').matches;
+function openSheet(which){
+  $('libAside').classList.toggle('open', which === 'lib');
+  $('inspAside').classList.toggle('open', which === 'insp');
+}
+$('libFab').onclick = () => openSheet($('libAside').classList.contains('open') ? null : 'lib');
+$('libClose').onclick = () => openSheet(null);
+$('inspClose').onclick = () => { sel = null; openSheet(null); drawTimeline(); drawInspector(); };
+
 // ---------------------------------------------------------------- state --
 function snapshot(){ return JSON.stringify(project); }
 function commit(){ history.push(snapshot()); if (history.length > 200) history.shift(); future = []; updateUndo(); }
@@ -302,6 +348,7 @@ function persist(){ try{ localStorage.setItem(STORAGE_KEY, snapshot()); }catch(e
 function prof(){ return project.profile || (project.profile = {...DEFAULT_PROFILE}); }
 function afterChange(){
   if (sel && !findSel()) sel = null;
+  if (!sel) $('inspAside').classList.remove('open');
   persist(); updateUndo(); drawProfileChips(); drawTimeline(); drawInspector(); requestRender();
 }
 function findSel(){
@@ -442,9 +489,11 @@ function drawTimeline(){
   }
   h += `</div></div>`;
   // events (transitions) lane
-  h += `<div class="row"><div class="head"><span class="name">between meals</span><span class="ctl">` +
+  h += `<div class="row"><div class="head"><span class="name">between meals</span><span class="ctl tr-btns">` +
        LIB.transition_kinds.map(k => `<button data-add-tr="${k.id}" title="Add ${esc(k.name)} at the playhead" style="color:${k.color}">+ ${esc(k.name.split(' ')[0])}</button>`).join('') +
-       `</span></div><div class="lane events" data-lane="events" style="width:${W}px">`;
+       `</span><select class="tr-sel" id="trSel" title="Add an event at the playhead"><option value="">+ event…</option>` +
+       LIB.transition_kinds.map(k => `<option value="${k.id}">${esc(k.name)}</option>`).join('') +
+       `</select></div><div class="lane events" data-lane="events" style="width:${W}px">`;
   for (let m = LIB.day_start; m <= LIB.day_end; m += 60) h += `<div class="grid" style="left:${xOf(m)}px"></div>`;
   for (const t of project.transitions){
     const k = trKind(t.kind);
@@ -488,6 +537,8 @@ function wireTimeline(){
   tl.querySelectorAll('[data-mute]').forEach(b => b.onclick = ev => { ev.stopPropagation(); toggleMute(b.dataset.mute); });
   tl.querySelectorAll('[data-solo]').forEach(b => b.onclick = ev => { ev.stopPropagation(); solo = solo === b.dataset.solo ? null : b.dataset.solo; drawTimeline(); requestRender(); });
   tl.querySelectorAll('[data-add-tr]').forEach(b => b.onclick = ev => { ev.stopPropagation(); addTransition(b.dataset.addTr, playhead); });
+  const trSel = $('trSel');
+  if (trSel){ trSel.onpointerdown = ev => ev.stopPropagation(); trSel.onchange = () => { const k = trSel.value; trSel.value = ''; if (k) addTransition(k, playhead); }; }
   const ruler = $('ruler');
   ruler.onpointerdown = ev => { setPlayhead(mOf(ev.clientX - ruler.getBoundingClientRect().left)); ruler.setPointerCapture(ev.pointerId);
     ruler.onpointermove = e2 => setPlayhead(mOf(e2.clientX - ruler.getBoundingClientRect().left)); };
@@ -577,7 +628,7 @@ function startDrag(ev, type, id, el){
   el.onpointerup = el.onpointercancel = () => {
     el.onpointermove = null;
     dragging = false;
-    if (!moved){ history.pop(); updateUndo(); }   // a click, not a move — don't record an undo step
+    if (!moved){ history.pop(); updateUndo(); if (isMobile()) openSheet('insp'); }   // a tap selects; no undo step
     afterChange();
   };
 }

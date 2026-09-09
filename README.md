@@ -33,6 +33,11 @@ Two demo days are built in (a muscle-gain client and a fat-loss client with
 a lactose restriction). Projects autosave in the browser and can be saved
 and loaded as JSON.
 
+On a phone the layout changes: the monitor stays at the top, the timeline
+comes first, the library opens as a drawer from the **+ Library** button, and
+tapping a clip slides up the inspector. Add ingredients with **+** (they land
+at the playhead); drag-and-drop is a desktop thing.
+
 Keyboard: `drag` move · edges trim · `Del` delete · `Ctrl+D` duplicate ·
 `Ctrl+Z` / `Ctrl+Y` undo / redo · `+` / `−` zoom · `M` mute the selected
 clip's track · `←` / `→` nudge · `Ctrl+Enter` render.
