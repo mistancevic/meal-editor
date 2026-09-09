@@ -14,7 +14,8 @@ this app is a timeline editor for meals.
 | **Clips** | an ingredient portion placed at a time of day; drag to move, trim the edges, snap to 5 minutes and to neighbours, drag across lanes |
 | **Effects** | how the clip is prepared (`data/prep_effects.json`): grilled −10 % fat, pan-fried +6 g oil per 100 g, breaded, cheese topping, honey glaze… stacked on a clip, macros follow |
 | **Transitions** | what happens *between* meals: training, a walk, a fasting window, sleep — they shape the timing notes |
-| **Monitor** | live calories and protein against the daily targets with the tolerance band drawn in; carbs and fat alongside |
+| **Preview monitor** | the frame under the playhead: a plate showing what is being eaten right now (wedges by calories, coloured by track), the running "so far" totals, and transport controls to play the day through at 1× to 4× |
+| **Scopes** | live calories and protein against the daily targets with the tolerance band drawn in; carbs and fat alongside |
 | **Render** | the finished day: each meal with the macro math shown, the ±150 kcal / ±10 g protein check, restriction and dislike warnings on the offending clips, timing notes, and a plain-text plan you can copy or download |
 
 Clips that sit close together become one meal and are labelled from the
@@ -40,7 +41,8 @@ at the playhead); drag-and-drop is a desktop thing.
 
 Keyboard: `drag` move · edges trim · `Del` delete · `Ctrl+D` duplicate ·
 `Ctrl+Z` / `Ctrl+Y` undo / redo · `+` / `−` zoom · `M` mute the selected
-clip's track · `←` / `→` nudge · `Ctrl+Enter` render.
+clip's track · `←` / `→` nudge · `Space` play / pause · `,` / `.` previous /
+next meal · `Ctrl+Enter` render.
 
 ## How it is built
 

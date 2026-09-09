@@ -84,6 +84,27 @@
   .meter .band{position:absolute;top:0;bottom:0;background:rgba(255,255,255,.14)}
   .meter .tick{position:absolute;top:-2px;bottom:-2px;width:2px;background:#fff;opacity:.8}
   #statusChip{justify-self:end}
+  /* ---------- preview monitor: what's on the plate at the playhead ---------- */
+  .preview{display:grid;grid-template-columns:128px minmax(0,1fr) auto;gap:6px 14px;align-items:center;
+           padding:8px 14px;background:#1a1d17;border-bottom:1px solid var(--line)}
+  #plate{width:128px;height:128px;display:block}
+  .pv-info{font-size:12.5px;line-height:1.45;min-width:0}
+  .pv-info b.big{font-size:15px}
+  .pv-info .dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle}
+  .pv-info .items{margin-top:4px}
+  .pv-info .items div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pv-ctl{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  .pv-ctl .transport{display:flex;gap:4px;align-items:center}
+  .pv-ctl .transport button{font-size:14px;padding:5px 9px}
+  .pv-ctl #pvPlay{background:var(--green-deep);border-color:var(--green-deep);color:#fff;min-width:42px}
+  .pv-ctl #pvSpeed{padding:4px 6px;font-size:12px}
+  .pv-sofar{font-size:12px;color:var(--muted);text-align:right;min-width:170px}
+  .pv-sofar b{color:var(--ink)}
+  .pv-sofar .bar{height:5px;background:#12150f;border-radius:3px;margin-top:3px;overflow:hidden;position:relative}
+  .pv-sofar .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--green);border-radius:3px}
+  .pv-sofar .bar i.p{background:var(--indigo)}
+  .pv-clock{font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink)}
+  .mealchips .chip.now{border-color:var(--red);color:var(--ink)}
   .mealchips{display:flex;flex-wrap:wrap;gap:6px;padding:6px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
   .mealchips .chip{cursor:pointer}
   .mealchips .chip:hover{border-color:var(--green)}
@@ -190,6 +211,11 @@
     .monitor{position:sticky;top:0;z-index:20;grid-template-columns:1fr 1fr;gap:8px 12px;padding:8px 10px}
     #statusChip{grid-column:1/-1;justify-self:start;max-width:100%;white-space:normal}
     .mealchips{padding:6px 10px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+    .preview{grid-template-columns:96px minmax(0,1fr);gap:4px 10px;padding:6px 10px}
+    #plate{width:96px;height:96px}
+    .pv-ctl{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center}
+    .pv-sofar{min-width:0;text-align:left}
+    .pv-sofar .bar{display:none}
     .tl-wrap{max-height:calc(100vh - 150px)}
     .head{padding:4px 6px;font-size:12px}
     .head .ctl button{padding:1px 4px;font-size:10px}
@@ -246,6 +272,21 @@
       <div class="meter" id="mCarb"></div>
       <div class="meter" id="mFat"></div>
       <span class="chip" id="statusChip">…</span>
+    </div>
+    <div class="preview" id="preview">
+      <svg id="plate" viewBox="0 0 120 120" aria-label="what's on the plate at the playhead"></svg>
+      <div class="pv-info" id="pvInfo"><span class="muted">rendering…</span></div>
+      <div class="pv-ctl">
+        <div class="transport">
+          <span class="pv-clock" id="pvClock">12:00</span>
+          <button class="icon" id="pvStart" title="To the start of the day (Home)">⏮</button>
+          <button class="icon" id="pvPrev" title="Previous meal (,)">⏴</button>
+          <button class="icon" id="pvPlay" title="Play / pause the day (Space)">▶</button>
+          <button class="icon" id="pvNext" title="Next meal (.)">⏵</button>
+          <select id="pvSpeed" title="Playback speed"><option value="5">slow</option><option value="15" selected>1×</option><option value="30">2×</option><option value="60">4×</option></select>
+        </div>
+        <div class="pv-sofar" id="pvSofar"></div>
+      </div>
     </div>
     <div class="mealchips" id="mealChips"></div>
     <div class="tl-wrap" id="tlWrap">
@@ -540,7 +581,7 @@ function wireTimeline(){
   const trSel = $('trSel');
   if (trSel){ trSel.onpointerdown = ev => ev.stopPropagation(); trSel.onchange = () => { const k = trSel.value; trSel.value = ''; if (k) addTransition(k, playhead); }; }
   const ruler = $('ruler');
-  ruler.onpointerdown = ev => { setPlayhead(mOf(ev.clientX - ruler.getBoundingClientRect().left)); ruler.setPointerCapture(ev.pointerId);
+  ruler.onpointerdown = ev => { if (playing) pause(); setPlayhead(mOf(ev.clientX - ruler.getBoundingClientRect().left)); ruler.setPointerCapture(ev.pointerId);
     ruler.onpointermove = e2 => setPlayhead(mOf(e2.clientX - ruler.getBoundingClientRect().left)); };
   ruler.onpointerup = () => { ruler.onpointermove = null; };
   tl.querySelectorAll('.lane').forEach(lane => {
@@ -555,12 +596,113 @@ function wireTimeline(){
   tl.querySelectorAll('.tr').forEach(el => el.onpointerdown = ev => startDrag(ev, 'tr', el.dataset.tr, el));
 }
 
-function setPlayhead(m){
-  playhead = snapMin(m);
-  const ph = $('playhead'); if (ph) ph.style.left = (xOf(playhead) + parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--head-w'))) + 'px';
-  const hd = document.querySelector('.ruler-head .muted'); if (hd) hd.textContent = 'playhead ' + hhmm(playhead);
-  $('libList').querySelectorAll('.add').forEach(b => b.title = `Add at the playhead (${hhmm(playhead)})`);
+function setPlayhead(m, raw = false){
+  playhead = raw ? clamp(m, LIB.day_start, LIB.day_end) : snapMin(m);
+  const headW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--head-w'));
+  const ph = $('playhead'); if (ph) ph.style.left = (xOf(playhead) + headW) + 'px';
+  const hd = document.querySelector('.ruler-head .muted'); if (hd) hd.textContent = 'playhead ' + hhmm(Math.round(playhead));
+  $('libList').querySelectorAll('.add').forEach(b => b.title = `Add at the playhead (${hhmm(Math.round(playhead))})`);
+  if (playing){                         // keep the playhead in view while the day plays
+    const wrap = $('tlWrap'), x = xOf(playhead) + headW;
+    if (x - wrap.scrollLeft > wrap.clientWidth - 60 || x - wrap.scrollLeft < headW) wrap.scrollLeft = Math.max(0, x - headW - 60);
+  }
+  drawPreview();
 }
+
+// ------------------------------------------------------- preview monitor --
+// The frame under the playhead: which clips are being eaten right now, drawn
+// as a plate (wedges by calories, coloured by track), plus what the day has
+// delivered so far. Play runs the playhead through the day like a scrub.
+let playing = false, playLast = 0;
+function currentMeal(m){ return lastRender ? lastRender.meals.find(x => m >= x.start && m < x.end) : null; }
+function consumedAt(m){
+  const c = {kcal: 0, protein_g: 0};
+  if (!lastRender) return c;
+  for (const meal of lastRender.meals) for (const i of meal.items){
+    const f = i.end <= m ? 1 : i.start >= m ? 0 : (m - i.start) / (i.end - i.start);
+    c.kcal += i.macros.kcal * f; c.protein_g += i.macros.protein_g * f;
+  }
+  return c;
+}
+function drawPlate(items){
+  const svg = $('plate');
+  let h = `<circle cx="60" cy="60" r="57" fill="#eee9dc" stroke="#cfc7b2" stroke-width="2"/><circle cx="60" cy="60" r="46" fill="none" stroke="#dcd5c2" stroke-width="1"/>`;
+  const total = items.reduce((a, i) => a + Math.max(i.macros.kcal, 1), 0);
+  if (!items.length || total <= 0){
+    h += `<circle cx="60" cy="60" r="30" fill="none" stroke="#cfc7b2" stroke-width="1" stroke-dasharray="3 3"/>`;
+    svg.innerHTML = h; return;
+  }
+  let a0 = -Math.PI / 2;
+  const R = 44, r = 16;
+  for (const i of items){
+    const frac = Math.max(i.macros.kcal, 1) / total;
+    const a1 = a0 + frac * 2 * Math.PI;
+    const col = track(i.track).color;
+    if (frac > 0.999){
+      h += `<circle cx="60" cy="60" r="${R}" fill="${col}"/><circle cx="60" cy="60" r="${r}" fill="#eee9dc"/>`;
+    } else {
+      const p = (ang, rad) => `${(60 + rad * Math.cos(ang)).toFixed(2)} ${(60 + rad * Math.sin(ang)).toFixed(2)}`;
+      const large = a1 - a0 > Math.PI ? 1 : 0;
+      h += `<path d="M ${p(a0, R)} A ${R} ${R} 0 ${large} 1 ${p(a1, R)} L ${p(a1, r)} A ${r} ${r} 0 ${large} 0 ${p(a0, r)} Z" fill="${col}" stroke="#eee9dc" stroke-width="1.5"><title>${esc(i.name)} ${i.grams} g · ${i.macros.kcal} kcal</title></path>`;
+    }
+    a0 = a1;
+  }
+  svg.innerHTML = h;
+}
+function drawPreview(){
+  const m = playhead;
+  $('pvClock').textContent = hhmm(Math.round(m));
+  if (!lastRender){ $('pvInfo').innerHTML = '<span class="muted">rendering…</span>'; return; }
+  const meal = currentMeal(m);
+  const active = meal ? meal.items.filter(i => m >= i.start && m < i.end) : [];
+  const tr = project.transitions.find(t => m >= t.start && m < t.end);
+  const next = lastRender.meals.find(x => x.start > m);
+  drawPlate(active);
+  let h;
+  if (active.length){
+    const kcal = active.reduce((a, i) => a + i.macros.kcal, 0), prot = active.reduce((a, i) => a + i.macros.protein_g, 0);
+    h = `<b class="big">${esc(meal.label)}</b> <span class="muted">${meal.time} · ${Math.round(kcal)} kcal · ${prot.toFixed(0)} g protein on the plate</span><div class="items">` +
+        active.map(i => `<div><span class="dot" style="background:${track(i.track).color}"></span>${esc(i.name)} <span class="muted">${i.grams} g${i.effects.length ? ' · ' + esc(i.effects.join(', ')) : ''}${i.warnings.length ? ' ⚠' : ''}</span></div>`).join('') + '</div>';
+  } else if (tr){
+    const k = trKind(tr.kind);
+    h = `<b class="big" style="color:${k.color}">${esc(k.name)}</b> <span class="muted">${hhmm(tr.start)}–${hhmm(tr.start + tr.duration)}</span><div class="items"><div class="muted">Nothing on the plate.</div>` +
+        (next ? `<div>Next: <b>${esc(next.label)}</b> at ${hhmm(next.start)}</div>` : '') + '</div>';
+  } else {
+    h = `<b class="big muted">Between meals</b><div class="items"><div class="muted">Nothing on the plate.</div>` +
+        (next ? `<div>Next: <b>${esc(next.label)}</b> at ${hhmm(next.start)} — ${next.totals.kcal} kcal · ${next.totals.protein_g} g protein</div>` : '<div class="muted">No more meals today.</div>') + '</div>';
+  }
+  $('pvInfo').innerHTML = h;
+  const c = consumedAt(m), t = lastRender.targets;
+  const pk = t ? clamp(c.kcal / t.calories_kcal * 100, 0, 100) : 0, pp = t ? clamp(c.protein_g / t.protein_g * 100, 0, 100) : 0;
+  $('pvSofar').innerHTML = `so far: <b>${Math.round(c.kcal)}</b> kcal · <b>${c.protein_g.toFixed(0)}</b> g protein${t ? ` <span class="muted">of ${t.calories_kcal} / ${t.protein_g}</span>` : ''}` +
+    (t ? `<div class="bar"><i style="width:${pk}%"></i></div><div class="bar"><i class="p" style="width:${pp}%"></i></div>` : '');
+  $('mealChips').querySelectorAll('[data-goto]').forEach(ch => ch.classList.toggle('now', !!meal && +ch.dataset.goto === meal.start));
+}
+function play(){
+  if (!LIB) return;
+  if (playhead >= LIB.day_end - 1) playhead = LIB.day_start;
+  playing = true; playLast = performance.now(); $('pvPlay').textContent = '⏸';
+  requestAnimationFrame(tick);
+}
+function pause(){ playing = false; $('pvPlay').textContent = '▶'; setPlayhead(playhead); }
+function tick(now){
+  if (!playing) return;
+  const dt = (now - playLast) / 1000; playLast = now;
+  const m = playhead + dt * (+$('pvSpeed').value || 15);   // minutes of the day per real second
+  if (m >= LIB.day_end){ setPlayhead(LIB.day_end, true); pause(); return; }
+  setPlayhead(m, true);
+  requestAnimationFrame(tick);
+}
+function jumpMeal(dir){
+  if (!lastRender) return;
+  const meals = lastRender.meals;
+  const target = dir > 0 ? meals.find(x => x.start > playhead + 1) : [...meals].reverse().find(x => x.start < playhead - 1);
+  if (target){ setPlayhead(target.start); $('tlWrap').scrollTo({left: Math.max(0, xOf(playhead) - 120), behavior: 'smooth'}); }
+}
+$('pvPlay').onclick = () => playing ? pause() : play();
+$('pvStart').onclick = () => { pause(); setPlayhead(LIB.day_start); $('tlWrap').scrollTo({left: 0, behavior: 'smooth'}); };
+$('pvPrev').onclick = () => jumpMeal(-1);
+$('pvNext').onclick = () => jumpMeal(1);
 
 function toggleMute(id){
   commit();
@@ -643,7 +785,7 @@ function drawInspector(){
       <p class="help"><b>How it works</b><br>The day is the timeline. Each <b>track</b> is one part of the plate. Drag an ingredient from the library onto a track (or press <b>+</b> to place it at the playhead) — that's a <b>clip</b>. Clips that sit close together become one <b>meal</b>.</p>
       <p class="help"><b>Effects</b> are how the clip is prepared — grilled, pan-fried, a cheese topping — and they change the macros the way an effect changes a picture. <b>Between meals</b> holds training, walks, fasting windows and sleep: they shape the timing notes, never the plan.</p>
       <p class="help"><b>Render</b> produces the finished day: every meal with the macro math shown, the check against the daily targets (±${LIB.tolerance.calories_kcal} kcal / ±${LIB.tolerance.protein_g} g protein), and a plan document you can export.</p>
-      <p class="help"><kbd>drag</kbd> move · <kbd>edges</kbd> trim · <kbd>Del</kbd> delete · <kbd>Ctrl+D</kbd> duplicate · <kbd>Ctrl+Z</kbd>/<kbd>Y</kbd> undo/redo · <kbd>+</kbd>/<kbd>−</kbd> zoom · <kbd>M</kbd> mute selected track · <kbd>Ctrl+Enter</kbd> render</p>`;
+      <p class="help"><kbd>drag</kbd> move · <kbd>edges</kbd> trim · <kbd>Del</kbd> delete · <kbd>Ctrl+D</kbd> duplicate · <kbd>Ctrl+Z</kbd>/<kbd>Y</kbd> undo/redo · <kbd>+</kbd>/<kbd>−</kbd> zoom · <kbd>M</kbd> mute selected track · <kbd>Ctrl+Enter</kbd> render · <kbd>Space</kbd> play/pause · <kbd>,</kbd>/<kbd>.</kbd> previous/next meal</p>`;
     return;
   }
   if (sel.type === 'tr'){
@@ -739,7 +881,7 @@ async function doRender(){
   if (seq !== renderSeq) return;          // a newer render is in flight
   if (data.error){ $('statusChip').className = 'chip bad'; $('statusChip').textContent = 'error: ' + data.error; return; }
   lastRender = data;
-  drawMonitor();
+  drawMonitor(); drawPreview();
   if (dragging) return;                   // the timeline is rebuilt on pointerup
   drawTimeline(); drawInspector();
   if ($('renderPanel').classList.contains('show')) drawRenderPanel();
@@ -820,7 +962,10 @@ document.addEventListener('keydown', ev => {
   else if (ev.key === '+' || ev.key === '='){ zoom(1.25); }
   else if (ev.key === '-'){ zoom(0.8); }
   else if (ev.key.toLowerCase() === 'm'){ const o = findSel(); if (o && sel.type === 'clip') toggleMute(o.track); }
-  else if (ev.key === 'Home'){ setPlayhead(LIB.day_start); $('tlWrap').scrollTo({left: 0}); }
+  else if (ev.key === ' '){ ev.preventDefault(); playing ? pause() : play(); }
+  else if (ev.key === ','){ jumpMeal(-1); }
+  else if (ev.key === '.'){ jumpMeal(1); }
+  else if (ev.key === 'Home'){ pause(); setPlayhead(LIB.day_start); $('tlWrap').scrollTo({left: 0}); }
   else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight'){ const o = findSel(); const d = (ev.key === 'ArrowLeft' ? -1 : 1) * (ev.shiftKey ? 15 : SNAP);
     if (o) edit(() => { o.start = clamp(o.start + d, LIB.day_start, LIB.day_end - o.duration); }); else setPlayhead(playhead + d); }
 });
