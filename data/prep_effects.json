@@ -1,0 +1,24 @@
+{
+  "_comment": "Effects the meal editor can stack on a clip, the way an editor stacks effects on a video or audio clip. A 'cook' effect is a preparation method (one per clip); a 'finish' effect is a topping or glaze (any number). Deltas are applied in order: multiply the clip's own macros by `scale`, then add `per_100g` × (grams/100), then add `flat` once per clip. Tags flow into the restriction check like ingredient tags.",
+  "effects": [
+    {"id": "grilled", "name": "Grilled", "group": "cook", "scale": {"fat_g": 0.9}, "per_100g": {}, "flat": {}, "tags": [], "hint": "fat drips off: −10% fat"},
+    {"id": "steamed", "name": "Steamed / boiled", "group": "cook", "scale": {}, "per_100g": {}, "flat": {}, "tags": [], "hint": "no added fat"},
+    {"id": "baked", "name": "Baked / roasted", "group": "cook", "scale": {}, "per_100g": {"fat_g": 3}, "flat": {}, "tags": [], "hint": "+3 g oil per 100 g"},
+    {"id": "air_fried", "name": "Air-fried", "group": "cook", "scale": {}, "per_100g": {"fat_g": 1}, "flat": {}, "tags": [], "hint": "+1 g oil per 100 g"},
+    {"id": "pan_fried", "name": "Pan-fried", "group": "cook", "scale": {}, "per_100g": {"fat_g": 6}, "flat": {}, "tags": [], "hint": "+6 g oil per 100 g"},
+    {"id": "deep_fried", "name": "Deep-fried", "group": "cook", "scale": {}, "per_100g": {"fat_g": 12, "carbs_g": 8}, "flat": {}, "tags": [], "hint": "+12 g fat and +8 g batter carbs per 100 g"},
+    {"id": "seasoned", "name": "Herbs & spices", "group": "finish", "scale": {}, "per_100g": {}, "flat": {}, "tags": [], "hint": "flavour only, no macro change"},
+    {"id": "breaded", "name": "Breaded", "group": "finish", "scale": {}, "per_100g": {"carbs_g": 10, "fat_g": 2}, "flat": {}, "tags": ["gluten"], "hint": "+10 g carbs and +2 g fat per 100 g"},
+    {"id": "oil_drizzle", "name": "Olive-oil drizzle (1 tsp)", "group": "finish", "scale": {}, "per_100g": {}, "flat": {"fat_g": 4.5}, "tags": [], "hint": "+4.5 g fat per clip"},
+    {"id": "cheese_topping", "name": "Cheese topping", "group": "finish", "scale": {}, "per_100g": {}, "flat": {"protein_g": 5, "fat_g": 7}, "tags": ["dairy", "lactose"], "hint": "+20 g grated cheese per clip"},
+    {"id": "creamy_sauce", "name": "Creamy sauce", "group": "finish", "scale": {}, "per_100g": {}, "flat": {"protein_g": 1, "carbs_g": 3, "fat_g": 8}, "tags": ["dairy", "lactose"], "hint": "+~90 kcal per clip"},
+    {"id": "tomato_sauce", "name": "Tomato sauce", "group": "finish", "scale": {}, "per_100g": {}, "flat": {"protein_g": 1, "carbs_g": 6, "fat_g": 1}, "tags": [], "hint": "+~35 kcal per clip"},
+    {"id": "honey_glaze", "name": "Honey glaze", "group": "finish", "scale": {}, "per_100g": {}, "flat": {"carbs_g": 12}, "tags": [], "hint": "+12 g sugar per clip"}
+  ],
+  "transitions": [
+    {"id": "training", "name": "Training", "default_minutes": 60, "color": "#ff8a3d"},
+    {"id": "walk", "name": "Walk", "default_minutes": 30, "color": "#7ac0a5"},
+    {"id": "fast", "name": "Fasting window", "default_minutes": 180, "color": "#8e948a"},
+    {"id": "sleep", "name": "Sleep", "default_minutes": 60, "color": "#6d7fd0"}
+  ]
+}

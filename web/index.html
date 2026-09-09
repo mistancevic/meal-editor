@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meal Editor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%232e6b3f'/%3E%3Cpath d='M9 16h14M9 11h14M9 21h9' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#181b16; --panel:#20241d; --panel-2:#272c23; --line:#343a2f; --line-soft:#2c3128;
+    --ink:#ecebe2; --muted:#9aa393; --green:#6fbf7a; --green-deep:#2e6b3f; --amber:#e0a83d;
+    --red:#e2705f; --indigo:#8ea0e8; --ruler:#1c1f19; --lane:#22261f; --lane-alt:#252a21;
+    --sans:"Avenir Next","Segoe UI",system-ui,sans-serif; --serif:"Georgia","Iowan Old Style",serif;
+    --head-w:168px; --lane-h:62px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.45 var(--sans);
+       display:flex;flex-direction:column;min-height:100vh}
+  a{color:var(--green)}
+  button{font:inherit;color:var(--ink);background:var(--panel-2);border:1px solid var(--line);
+         border-radius:8px;padding:6px 10px;cursor:pointer}
+  button:hover{border-color:var(--green)}
+  button.primary{background:var(--green-deep);border-color:var(--green-deep);color:#fff;font-weight:600}
+  button.primary:hover{background:#3a8450}
+  button.icon{padding:4px 8px;line-height:1}
+  button:disabled{opacity:.4;cursor:default}
+  input,select,textarea{font:inherit;color:var(--ink);background:#15180f;border:1px solid var(--line);
+         border-radius:7px;padding:6px 8px}
+  input[type=range]{padding:0;background:transparent;border:0;width:100%}
+  input[type=number]{width:78px}
+  .muted{color:var(--muted)}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:12px;
+        background:var(--panel-2);border:1px solid var(--line);white-space:nowrap}
+  .chip.ok{color:var(--green);border-color:#3f6b48}
+  .chip.warn{color:var(--amber);border-color:#6b5426}
+  .chip.bad{color:var(--red);border-color:#6b3a33}
+
+  /* ---------- top bar ---------- */
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 16px;
+         background:var(--panel);border-bottom:1px solid var(--line)}
+  header .brand{font:600 20px/1 var(--serif);margin-right:6px}
+  header .brand em{color:var(--green);font-style:normal}
+  header .brand small{font:12px var(--sans);color:var(--muted);margin-left:8px}
+  header .spacer{flex:1}
+  header .group{display:flex;align-items:center;gap:6px}
+  #demoSel{max-width:170px}
+
+  /* ---------- workspace ---------- */
+  main{flex:1;display:grid;grid-template-columns:250px minmax(0,1fr) 290px;gap:0}
+  @media(max-width:1000px){ main{grid-template-columns:1fr} aside{max-height:none} }
+  aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column}
+  aside.right{border-right:0;border-left:1px solid var(--line)}
+  aside h3{margin:0;padding:10px 12px 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  #libSearch{margin:0 12px 6px;width:calc(100% - 24px)}
+  .tabs{display:flex;flex-wrap:wrap;gap:4px;padding:0 12px 8px}
+  .tabs button{padding:3px 8px;font-size:12px;border-radius:999px}
+  .tabs button.on{border-color:var(--green);color:var(--green)}
+  #libList{overflow:auto;flex:1;padding:0 8px 12px;min-height:120px;max-height:70vh}
+  .lib-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:grab;
+            border:1px solid transparent}
+  .lib-item:hover{background:var(--panel-2);border-color:var(--line)}
+  .lib-item .swatch{width:8px;height:26px;border-radius:3px;flex:none}
+  .lib-item .t{flex:1;min-width:0}
+  .lib-item .t b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lib-item .t small{color:var(--muted)}
+  .lib-item .add{flex:none}
+
+  /* ---------- center ---------- */
+  .center{display:flex;flex-direction:column;min-width:0;min-height:0}
+  .monitor{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr)) auto;gap:10px;align-items:center;
+           padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+  @media(max-width:1000px){ .monitor{grid-template-columns:repeat(2,1fr)} }
+  .meter{min-width:0}
+  .meter .lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+  .meter .lbl b{color:var(--ink);font-weight:600}
+  .meter .bar{position:relative;height:10px;background:#12150f;border-radius:6px;margin-top:4px;overflow:hidden}
+  .meter .fill{position:absolute;left:0;top:0;bottom:0;background:var(--green);border-radius:6px;transition:width .15s}
+  .meter .fill.over{background:var(--amber)}
+  .meter .fill.bad{background:var(--red)}
+  .meter .band{position:absolute;top:0;bottom:0;background:rgba(255,255,255,.14)}
+  .meter .tick{position:absolute;top:-2px;bottom:-2px;width:2px;background:#fff;opacity:.8}
+  #statusChip{justify-self:end}
+  .mealchips{display:flex;flex-wrap:wrap;gap:6px;padding:6px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .mealchips .chip{cursor:pointer}
+  .mealchips .chip:hover{border-color:var(--green)}
+
+  .tl-wrap{flex:1;overflow:auto;position:relative;background:var(--bg);min-height:280px;max-height:calc(100vh - 200px)}
+  .tl{position:relative;display:grid;grid-template-columns:var(--head-w) auto;width:max-content;min-width:100%}
+  .row{display:contents}
+  .head{position:sticky;left:0;z-index:5;background:var(--panel);border-right:1px solid var(--line);
+        border-bottom:1px solid var(--line-soft);padding:6px 10px;display:flex;flex-direction:column;justify-content:center;gap:4px}
+  .head .name{font-weight:600;display:flex;align-items:center;gap:6px}
+  .head .name i{width:8px;height:8px;border-radius:2px;display:inline-block}
+  .head .ctl{display:flex;gap:4px}
+  .head .ctl button{padding:1px 6px;font-size:11px;border-radius:5px}
+  .head .ctl button.on{background:var(--amber);color:#111;border-color:var(--amber)}
+  .head .ctl button.on.solo{background:var(--indigo);border-color:var(--indigo)}
+  .head.muted .name{opacity:.5}
+  .ruler-head{height:44px;border-bottom:1px solid var(--line)}
+  .ruler-head .name{font-size:12px;color:var(--muted)}
+  .ruler{position:relative;height:44px;background:var(--ruler);border-bottom:1px solid var(--line);cursor:crosshair}
+  .ruler .tick{position:absolute;top:0;bottom:0;border-left:1px solid var(--line);font-size:11px;color:var(--muted);padding:2px 0 0 4px}
+  .ruler .tick.minor{border-left-color:var(--line-soft);top:30px;padding:0}
+  .ruler .span{position:absolute;bottom:3px;height:16px;border-radius:4px;background:rgba(111,191,122,.25);
+               border:1px solid rgba(111,191,122,.6);font-size:11px;line-height:14px;padding:0 5px;white-space:nowrap;overflow:hidden}
+  .lane{position:relative;height:var(--lane-h);background:var(--lane);border-bottom:1px solid var(--line-soft)}
+  .lane.alt{background:var(--lane-alt)}
+  .lane.events{height:auto;min-height:40px;background:#1e2120}
+  .lane.muted{background-image:repeating-linear-gradient(135deg,transparent 0 10px,rgba(0,0,0,.18) 10px 20px)}
+  .lane.dropping{outline:2px dashed var(--green);outline-offset:-2px}
+  .grid{position:absolute;top:0;bottom:0;border-left:1px solid var(--line-soft);pointer-events:none}
+
+  .clip{position:absolute;top:5px;height:calc(var(--lane-h) - 10px);border-radius:7px;background:var(--c,#888);
+        color:#0f120d;padding:5px 7px;overflow:hidden;cursor:grab;user-select:none;
+        box-shadow:0 1px 2px rgba(0,0,0,.35);border:2px solid transparent;font-size:11.5px;line-height:1.3}
+  .clip:active{cursor:grabbing}
+  .clip .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .clip .m{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85}
+  .clip.sel{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.35)}
+  .clip.warn::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--red)}
+  .clip .fx{position:absolute;right:5px;top:3px;font-size:10px;background:rgba(0,0,0,.35);color:#fff;border-radius:4px;padding:0 4px}
+  .clip .h{position:absolute;top:0;bottom:0;width:8px;cursor:ew-resize}
+  .clip .h.l{left:0}
+  .clip .h.r{right:0}
+  .clip.muted-clip{opacity:.45}
+  .tr{position:absolute;top:6px;height:28px;border-radius:6px;border:1px dashed var(--c,#aaa);color:var(--c,#aaa);
+      background:rgba(0,0,0,.25);padding:4px 8px;font-size:12px;white-space:nowrap;overflow:hidden;cursor:grab;user-select:none}
+  .tr.sel{border-style:solid;box-shadow:0 0 0 2px rgba(255,255,255,.3)}
+  .tr .h{position:absolute;top:0;bottom:0;width:8px;cursor:ew-resize}
+  .tr .h.l{left:0} .tr .h.r{right:0}
+  #playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--red);z-index:4;pointer-events:none}
+  #playhead::before{content:"";position:absolute;top:0;left:-6px;border:7px solid transparent;border-top:9px solid var(--red)}
+
+  /* ---------- inspector ---------- */
+  #inspector{padding:0 12px 14px;overflow:auto;flex:1;max-height:calc(100vh - 120px)}
+  .field{margin:8px 0}
+  .field label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em}
+  .field .row{display:flex;gap:6px;align-items:center}
+  .fxlist{display:flex;flex-direction:column;gap:4px}
+  .fxlist .fx{display:flex;align-items:center;gap:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:4px 8px}
+  .fxlist .fx b{font-weight:500;flex:1}
+  .fxlist .fx small{color:var(--muted)}
+  .kv{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:12px;margin-top:6px}
+  .kv span:nth-child(even){text-align:right;font-variant-numeric:tabular-nums}
+  .warnbox{background:rgba(226,112,95,.12);border:1px solid #6b3a33;color:var(--red);border-radius:7px;padding:6px 8px;font-size:12px;margin-top:6px}
+  .help{font-size:12px;color:var(--muted);line-height:1.5}
+  .help kbd{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:0 5px;font-size:11px}
+
+  /* ---------- render panel ---------- */
+  #renderPanel{background:var(--panel);border-top:1px solid var(--line);max-height:60vh;overflow:auto;display:none}
+  #renderPanel.show{display:block}
+  #renderPanel .inner{padding:12px 16px 20px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px}
+  @media(max-width:1000px){ #renderPanel .inner{grid-template-columns:1fr} }
+  .rp-head{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--line)}
+  .rp-head h2{margin:0;font:600 16px var(--serif)}
+  .meal-card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--panel-2)}
+  .meal-card h4{margin:0 0 6px;display:flex;justify-content:space-between;font-weight:600}
+  .meal-card h4 span:last-child{color:var(--muted);font-weight:400}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  td,th{padding:3px 6px;border-bottom:1px dashed var(--line);text-align:right;font-variant-numeric:tabular-nums}
+  td:first-child,th:first-child{text-align:left}
+  th{color:var(--muted);font-weight:500}
+  td.w{color:var(--red)}
+  .note{border-radius:8px;padding:7px 10px;margin:6px 0;font-size:13px;border:1px solid var(--line)}
+  .note.ok{color:var(--green);border-color:#3f6b48;background:rgba(111,191,122,.08)}
+  .note.warn{color:var(--amber);border-color:#6b5426;background:rgba(224,168,61,.08)}
+  .note.info{color:var(--indigo);border-color:#3f4a78;background:rgba(142,160,232,.08)}
+  #exportMd{width:100%;min-height:240px;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;resize:vertical}
+  .btnrow{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  dialog{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:16px 18px;width:min(420px,92vw)}
+  dialog::backdrop{background:rgba(0,0,0,.55)}
+  #pRestr label{display:inline-flex;align-items:center;gap:4px;text-transform:none;letter-spacing:0;font-size:12px;color:var(--ink);
+                border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin:0;cursor:pointer}
+  #pRestr label:has(input:checked){border-color:var(--red);color:var(--red)}
+  #pRestr input{margin:0}
+  #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#000c;color:#fff;padding:8px 14px;
+         border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
+  #toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">meal<em>editor</em><small>build a day like you cut a film</small></div>
+  <div class="group">
+    <button id="profileBtn" title="Who this day is for: targets, restrictions, dislikes, bedtime">👤 <span id="profileName">Client</span></button>
+    <span id="profileChips" class="group"></span>
+  </div>
+  <div class="spacer"></div>
+  <div class="group">
+    <button class="icon" id="undoBtn" title="Undo (Ctrl+Z)">↶</button>
+    <button class="icon" id="redoBtn" title="Redo (Ctrl+Y)">↷</button>
+    <button class="icon" id="zoomOut" title="Zoom out (−)">−</button>
+    <button class="icon" id="zoomIn" title="Zoom in (+)">+</button>
+    <button class="icon" id="zoomFit" title="Zoom to fit the whole day">⤢</button>
+    <select id="demoSel" title="Load a demo day (replaces the timeline and the profile)"><option value="">Demo day…</option></select>
+    <button id="clearBtn" title="Empty the timeline">Clear</button>
+    <button class="primary" id="renderBtn" title="Render the finished day (Ctrl+Enter)">▶ Render</button>
+  </div>
+</header>
+
+<main>
+  <aside class="left">
+    <h3>Library</h3>
+    <input id="libSearch" type="search" placeholder="search ingredients…">
+    <div class="tabs" id="libTabs"></div>
+    <div id="libList"></div>
+  </aside>
+
+  <section class="center">
+    <div class="monitor">
+      <div class="meter" id="mKcal"></div>
+      <div class="meter" id="mProt"></div>
+      <div class="meter" id="mCarb"></div>
+      <div class="meter" id="mFat"></div>
+      <span class="chip" id="statusChip">…</span>
+    </div>
+    <div class="mealchips" id="mealChips"></div>
+    <div class="tl-wrap" id="tlWrap">
+      <div class="tl" id="tl"></div>
+    </div>
+  </section>
+
+  <aside class="right">
+    <h3 id="inspTitle">Inspector</h3>
+    <div id="inspector"></div>
+  </aside>
+</main>
+
+<section id="renderPanel">
+  <div class="rp-head">
+    <h2>Rendered day</h2>
+    <span class="muted" id="rpSummary"></span>
+    <span class="spacer" style="flex:1"></span>
+    <button class="icon" id="rpClose" title="Close">✕</button>
+  </div>
+  <div class="inner">
+    <div id="rpMeals"></div>
+    <div>
+      <div id="rpNotes"></div>
+      <h4 style="margin:12px 0 4px">Export — plan document</h4>
+      <p class="muted" style="margin:0 0 6px;font-size:12px">A plain-text plan of the day — paste it anywhere or hand it to a coach.</p>
+      <textarea id="exportMd" readonly></textarea>
+      <div class="btnrow">
+        <button id="copyMd">Copy plan</button>
+        <button id="dlMd">Download .md</button>
+        <button id="saveJson">Save project (.json)</button>
+        <label><button onclick="document.getElementById('loadJson').click()">Load project…</button>
+          <input type="file" id="loadJson" accept="application/json" style="display:none"></label>
+      </div>
+    </div>
+  </div>
+</section>
+<dialog id="profileDlg">
+  <form method="dialog" id="profileForm">
+    <h3 style="margin:0 0 10px;padding:0;text-transform:none;letter-spacing:0;font:600 16px var(--serif);color:var(--ink)">Client profile</h3>
+    <div class="field"><label>name</label><input id="pName" type="text" style="width:100%"></div>
+    <div class="field"><label>goal</label><input id="pGoal" type="text" style="width:100%" placeholder="e.g. lean muscle gain"></div>
+    <div class="field"><label>daily targets (0 = none)</label><div class="row">
+      <input id="pKcal" type="number" min="0" step="10"> <span class="muted">kcal</span>
+      <input id="pProt" type="number" min="0" step="5"> <span class="muted">g protein</span></div></div>
+    <div class="field"><label>avoid (ingredient tags)</label><div class="row" style="flex-wrap:wrap" id="pRestr"></div></div>
+    <div class="field"><label>dislikes (comma-separated)</label><input id="pDislikes" type="text" style="width:100%" placeholder="e.g. lentil, jerky"></div>
+    <div class="field"><label>usual bedtime</label><div class="row"><input id="pBed" type="time" step="300">
+      <label style="display:inline;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)"><input id="pTrain" type="checkbox"> trains tomorrow</label></div></div>
+    <div class="btnrow" style="justify-content:flex-end"><button value="cancel" type="button" id="pCancel">Cancel</button><button value="ok" class="primary" id="pSave">Save</button></div>
+  </form>
+</dialog>
+<div id="toast"></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hhmm = m => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+const parseHHMM = s => { const [h, m] = String(s).split(':').map(Number); return isFinite(h) && isFinite(m) ? h * 60 + m : null; };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const SNAP = 5;              // minutes
+const MAGNET_PX = 8;
+
+let LIB = null;              // /api/editor/library payload
+const DEFAULT_PROFILE = {name: 'Client', goal: '', calories_kcal: 0, protein_g: 0, restrictions: [], dislikes: [], usual_bedtime: '23:00', training_tomorrow: false};
+const RESTRICTION_TAGS = ['lactose', 'dairy', 'fish', 'shellfish', 'gluten', 'nuts', 'soy', 'legume', 'alcohol'];
+const STORAGE_KEY = 'mealeditor.project';
+let project = {profile: {...DEFAULT_PROFILE}, clips: [], transitions: [], muted_tracks: []};
+let solo = null;             // track id soloed (local, not saved)
+let sel = null;              // {type:'clip'|'tr', id}
+let playhead = 12 * 60;
+let pxPerMin = 2.2;
+let history = [], future = [];
+let lastRender = null;
+let libFilter = 'all';
+let uid = 1;
+const newId = p => `${p}${Date.now().toString(36)}${(uid++).toString(36)}`;
+
+// ---------------------------------------------------------------- state --
+function snapshot(){ return JSON.stringify(project); }
+function commit(){ history.push(snapshot()); if (history.length > 200) history.shift(); future = []; updateUndo(); }
+function undo(){ if (!history.length) return; future.push(snapshot()); project = JSON.parse(history.pop()); afterChange(); }
+function redo(){ if (!future.length) return; history.push(snapshot()); project = JSON.parse(future.pop()); afterChange(); }
+function updateUndo(){ $('undoBtn').disabled = !history.length; $('redoBtn').disabled = !future.length; }
+function persist(){ try{ localStorage.setItem(STORAGE_KEY, snapshot()); }catch(e){} }
+function prof(){ return project.profile || (project.profile = {...DEFAULT_PROFILE}); }
+function afterChange(){
+  if (sel && !findSel()) sel = null;
+  persist(); updateUndo(); drawProfileChips(); drawTimeline(); drawInspector(); requestRender();
+}
+function findSel(){
+  if (!sel) return null;
+  return sel.type === 'clip' ? project.clips.find(c => c.id === sel.id) : project.transitions.find(t => t.id === sel.id);
+}
+function ing(id){ return LIB.ingredients.find(i => i.id === id); }
+function track(id){ return LIB.tracks.find(t => t.id === id); }
+function effect(id){ return LIB.effects.find(e => e.id === id); }
+function trKind(id){ return LIB.transition_kinds.find(k => k.id === id); }
+function effectiveMuted(){
+  if (solo) return LIB.tracks.map(t => t.id).filter(id => id !== solo);
+  return project.muted_tracks;
+}
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1600); }
+
+// -------------------------------------------------------------- loading --
+async function loadLibrary(){
+  const res = await fetch('/api/library');
+  LIB = await res.json();
+  $('demoSel').innerHTML = '<option value="">Demo day…</option>' +
+    Object.entries(LIB.demos).map(([k, d]) => `<option value="${k}">${esc(d.profile.name)} — ${esc(d.profile.goal || k)}</option>`).join('');
+  drawLibraryTabs(); drawLibrary();
+  let saved = null;
+  try{ saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); }catch(e){}
+  if (saved && Array.isArray(saved.clips)) project = saved;
+  else loadDemo(Object.keys(LIB.demos)[0], false);
+  if (!project.profile) project.profile = {...DEFAULT_PROFILE};
+  history = []; future = []; sel = null; solo = null;
+  afterChange();
+}
+function loadDemo(key, record = true){
+  const d = LIB.demos[key]; if (!d) return;
+  if (record) commit();
+  project = JSON.parse(JSON.stringify({profile: d.profile, clips: d.clips, transitions: d.transitions, muted_tracks: d.muted_tracks || []}));
+  sel = null;
+}
+function drawProfileChips(){
+  const p = prof();
+  $('profileName').textContent = p.name || 'Client';
+  let chips = '';
+  chips += (p.calories_kcal > 0 && p.protein_g > 0)
+    ? `<span class="chip ok">${p.calories_kcal} kcal / ${p.protein_g} g protein daily</span>`
+    : `<span class="chip warn" title="Set targets in the profile to check the day">no daily targets</span>`;
+  if (p.restrictions.length) chips += `<span class="chip">avoids: ${esc(p.restrictions.join(', '))}</span>`;
+  if (p.dislikes.length) chips += `<span class="chip">dislikes: ${esc(p.dislikes.join(', '))}</span>`;
+  chips += `<span class="chip">bed ${esc(p.usual_bedtime)}</span>`;
+  if (p.training_tomorrow) chips += `<span class="chip" style="color:var(--indigo)">trains tomorrow</span>`;
+  $('profileChips').innerHTML = chips;
+}
+function openProfile(){
+  const p = prof();
+  $('pName').value = p.name; $('pGoal').value = p.goal; $('pKcal').value = p.calories_kcal; $('pProt').value = p.protein_g;
+  $('pRestr').innerHTML = RESTRICTION_TAGS.map(t => `<label><input type="checkbox" value="${t}" ${p.restrictions.includes(t) ? 'checked' : ''}> ${t}</label>`).join('');
+  $('pDislikes').value = p.dislikes.join(', '); $('pBed').value = p.usual_bedtime; $('pTrain').checked = !!p.training_tomorrow;
+  $('profileDlg').showModal();
+}
+$('profileBtn').onclick = openProfile;
+$('pCancel').onclick = () => $('profileDlg').close();
+$('profileForm').onsubmit = ev => {
+  ev.preventDefault();
+  commit();
+  project.profile = {
+    name: $('pName').value.trim() || 'Client', goal: $('pGoal').value.trim(),
+    calories_kcal: Math.max(0, +$('pKcal').value || 0), protein_g: Math.max(0, +$('pProt').value || 0),
+    restrictions: [...$('pRestr').querySelectorAll('input:checked')].map(i => i.value),
+    dislikes: $('pDislikes').value.split(',').map(x => x.trim().toLowerCase()).filter(Boolean),
+    usual_bedtime: $('pBed').value || '23:00', training_tomorrow: $('pTrain').checked,
+  };
+  $('profileDlg').close();
+  drawLibrary(); afterChange();
+};
+
+// -------------------------------------------------------------- library --
+function drawLibraryTabs(){
+  const tabs = [{id: 'all', name: 'All'}, ...LIB.tracks];
+  $('libTabs').innerHTML = tabs.map(t => `<button data-t="${t.id}" class="${libFilter === t.id ? 'on' : ''}">${esc(t.name)}</button>`).join('');
+  $('libTabs').querySelectorAll('button').forEach(b => b.onclick = () => { libFilter = b.dataset.t; drawLibraryTabs(); drawLibrary(); });
+}
+function drawLibrary(){
+  const q = $('libSearch').value.trim().toLowerCase();
+  const items = LIB.ingredients.filter(i => (libFilter === 'all' || i.track === libFilter) &&
+    (!q || i.name.toLowerCase().includes(q) || i.tags.some(t => t.includes(q))));
+  $('libList').innerHTML = items.map(i => {
+    const clash = i.tags.some(t => prof().restrictions.includes(t)) || prof().dislikes.some(d => i.name.toLowerCase().includes(d.toLowerCase()));
+    return `<div class="lib-item" draggable="true" data-id="${i.id}" title="${esc(i.name)} — per 100 g: ${i.kcal} kcal, ${i.protein_g} g protein, ${i.carbs_g} g carbs, ${i.fat_g} g fat${i.tags.length ? ' · ' + esc(i.tags.join(', ')) : ''}">
+      <span class="swatch" style="background:${track(i.track).color}"></span>
+      <span class="t"><b>${esc(i.name)}${clash ? ' <span style="color:var(--red)" title="clashes with this client\'s restrictions or dislikes">⚠</span>' : ''}</b>
+        <small>${i.kcal} kcal · ${i.protein_g} g P /100 g · ${i.default_g} g</small></span>
+      <button class="icon add" title="Add at the playhead (${hhmm(playhead)})">+</button>
+    </div>`;
+  }).join('') || '<p class="muted" style="padding:8px">nothing matches</p>';
+  $('libList').querySelectorAll('.lib-item').forEach(el => {
+    el.querySelector('.add').onclick = () => addClip(el.dataset.id, playhead);
+    el.ondragstart = ev => { ev.dataTransfer.setData('text/plain', el.dataset.id); ev.dataTransfer.effectAllowed = 'copy'; };
+    el.ondblclick = () => addClip(el.dataset.id, playhead);
+  });
+}
+$('libSearch').oninput = drawLibrary;
+
+function addClip(ingId, start, trackId){
+  const i = ing(ingId); if (!i) return;
+  commit();
+  const clip = {id: newId('c'), ingredient: i.id, track: trackId || i.track, start: snapMin(start), duration: 30, grams: i.default_g, effects: []};
+  project.clips.push(clip);
+  sel = {type: 'clip', id: clip.id};
+  afterChange();
+}
+function addTransition(kind, start){
+  const k = trKind(kind); if (!k) return;
+  commit();
+  const t = {id: newId('t'), kind: k.id, start: snapMin(start), duration: k.default_minutes};
+  project.transitions.push(t);
+  sel = {type: 'tr', id: t.id};
+  afterChange();
+}
+function snapMin(m){ return clamp(Math.round(m / SNAP) * SNAP, LIB.day_start, LIB.day_end - SNAP); }
+
+// ------------------------------------------------------------- timeline --
+const xOf = m => (m - LIB.day_start) * pxPerMin;
+const mOf = x => LIB.day_start + x / pxPerMin;
+
+function drawTimeline(){
+  const tl = $('tl');
+  const W = xOf(LIB.day_end);
+  const muted = effectiveMuted();
+  let h = '';
+  // ruler row
+  h += `<div class="row"><div class="head ruler-head"><span class="name">timeline</span><span class="muted" style="font-size:11px">playhead ${hhmm(playhead)}</span></div>
+        <div class="ruler" id="ruler" style="width:${W}px">`;
+  for (let m = LIB.day_start; m <= LIB.day_end; m += 15){
+    const major = m % 60 === 0;
+    if (!major && pxPerMin < 1) continue;
+    h += `<div class="tick ${major ? '' : 'minor'}" style="left:${xOf(m)}px">${major ? hhmm(m) : ''}</div>`;
+  }
+  if (lastRender) for (const meal of lastRender.meals){
+    h += `<div class="span" style="left:${xOf(meal.start)}px;width:${Math.max(24, xOf(meal.end) - xOf(meal.start))}px" title="${esc(meal.label)} ${meal.time}: ${meal.totals.kcal} kcal, ${meal.totals.protein_g} g protein">${esc(meal.label)} · ${meal.totals.kcal} kcal</div>`;
+  }
+  h += `</div></div>`;
+  // events (transitions) lane
+  h += `<div class="row"><div class="head"><span class="name">between meals</span><span class="ctl">` +
+       LIB.transition_kinds.map(k => `<button data-add-tr="${k.id}" title="Add ${esc(k.name)} at the playhead" style="color:${k.color}">+ ${esc(k.name.split(' ')[0])}</button>`).join('') +
+       `</span></div><div class="lane events" data-lane="events" style="width:${W}px">`;
+  for (let m = LIB.day_start; m <= LIB.day_end; m += 60) h += `<div class="grid" style="left:${xOf(m)}px"></div>`;
+  for (const t of project.transitions){
+    const k = trKind(t.kind);
+    const isSel = sel && sel.type === 'tr' && sel.id === t.id;
+    h += `<div class="tr ${isSel ? 'sel' : ''}" data-tr="${t.id}" style="left:${xOf(t.start)}px;width:${Math.max(30, xOf(t.end || t.start + t.duration) - xOf(t.start))}px;--c:${k.color}" title="${esc(k.name)} ${hhmm(t.start)}–${hhmm(t.start + t.duration)}">
+      <span class="h l"></span>${esc(k.name)} ${hhmm(t.start)}–${hhmm(t.start + t.duration)}<span class="h r"></span></div>`;
+  }
+  h += `</div></div>`;
+  // ingredient tracks
+  LIB.tracks.forEach((tr, idx) => {
+    const isMuted = muted.includes(tr.id);
+    const isSolo = solo === tr.id;
+    h += `<div class="row"><div class="head ${isMuted ? 'muted' : ''}"><span class="name"><i style="background:${tr.color}"></i>${esc(tr.name)}</span>
+          <span class="ctl"><button data-mute="${tr.id}" class="${project.muted_tracks.includes(tr.id) ? 'on' : ''}" title="Mute: leave this track out of the totals">M</button>
+          <button data-solo="${tr.id}" class="${isSolo ? 'on solo' : ''}" title="Solo: hear only this track">S</button></span></div>
+          <div class="lane ${idx % 2 ? 'alt' : ''} ${isMuted ? 'muted' : ''}" data-lane="${tr.id}" style="width:${W}px">`;
+    for (let m = LIB.day_start; m <= LIB.day_end; m += 60) h += `<div class="grid" style="left:${xOf(m)}px"></div>`;
+    for (const c of project.clips.filter(c => c.track === tr.id)){
+      const i = ing(c.ingredient);
+      const item = lastRender && lastRender.meals.flatMap(m => m.items).find(it => it.clip_id === c.id);
+      const macros = item ? `${item.macros.kcal} kcal · ${item.macros.protein_g} g P` : '';
+      const warn = item && item.warnings.length;
+      const isSel = sel && sel.type === 'clip' && sel.id === c.id;
+      const w = Math.max(28, xOf(c.start + c.duration) - xOf(c.start));
+      h += `<div class="clip ${isSel ? 'sel' : ''} ${warn ? 'warn' : ''} ${isMuted ? 'muted-clip' : ''}" data-clip="${c.id}"
+              style="left:${xOf(c.start)}px;width:${w}px;--c:${tr.color}" title="${esc(i.name)} ${c.grams} g · ${hhmm(c.start)}–${hhmm(c.start + c.duration)}${macros ? ' · ' + macros : ''}${warn ? ' · ' + esc(item.warnings.join('; ')) : ''}">
+              <span class="h l"></span>
+              <div class="n">${esc(i.name)}</div>
+              <div class="m">${c.grams} g${w > 120 ? ' · ' + macros : (w > 76 && item ? ' · ' + item.macros.kcal + ' kcal' : '')}</div>
+              ${c.effects.length ? `<span class="fx">fx ${c.effects.length}</span>` : ''}
+              <span class="h r"></span></div>`;
+    }
+    h += `</div></div>`;
+  });
+  tl.innerHTML = h + `<div id="playhead" style="left:${xOf(playhead) + parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--head-w'))}px"></div>`;
+  wireTimeline();
+}
+
+function wireTimeline(){
+  const tl = $('tl');
+  tl.querySelectorAll('[data-mute]').forEach(b => b.onclick = ev => { ev.stopPropagation(); toggleMute(b.dataset.mute); });
+  tl.querySelectorAll('[data-solo]').forEach(b => b.onclick = ev => { ev.stopPropagation(); solo = solo === b.dataset.solo ? null : b.dataset.solo; drawTimeline(); requestRender(); });
+  tl.querySelectorAll('[data-add-tr]').forEach(b => b.onclick = ev => { ev.stopPropagation(); addTransition(b.dataset.addTr, playhead); });
+  const ruler = $('ruler');
+  ruler.onpointerdown = ev => { setPlayhead(mOf(ev.clientX - ruler.getBoundingClientRect().left)); ruler.setPointerCapture(ev.pointerId);
+    ruler.onpointermove = e2 => setPlayhead(mOf(e2.clientX - ruler.getBoundingClientRect().left)); };
+  ruler.onpointerup = () => { ruler.onpointermove = null; };
+  tl.querySelectorAll('.lane').forEach(lane => {
+    lane.ondragover = ev => { if (lane.dataset.lane === 'events') return; ev.preventDefault(); ev.dataTransfer.dropEffect = 'copy'; lane.classList.add('dropping'); };
+    lane.ondragleave = () => lane.classList.remove('dropping');
+    lane.ondrop = ev => { ev.preventDefault(); lane.classList.remove('dropping');
+      const id = ev.dataTransfer.getData('text/plain'); if (!ing(id)) return;
+      addClip(id, mOf(ev.clientX - lane.getBoundingClientRect().left), lane.dataset.lane); };
+    lane.onpointerdown = ev => { if (ev.target === lane || ev.target.classList.contains('grid')) { sel = null; setPlayhead(mOf(ev.clientX - lane.getBoundingClientRect().left)); drawTimeline(); drawInspector(); } };
+  });
+  tl.querySelectorAll('.clip').forEach(el => el.onpointerdown = ev => startDrag(ev, 'clip', el.dataset.clip, el));
+  tl.querySelectorAll('.tr').forEach(el => el.onpointerdown = ev => startDrag(ev, 'tr', el.dataset.tr, el));
+}
+
+function setPlayhead(m){
+  playhead = snapMin(m);
+  const ph = $('playhead'); if (ph) ph.style.left = (xOf(playhead) + parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--head-w'))) + 'px';
+  const hd = document.querySelector('.ruler-head .muted'); if (hd) hd.textContent = 'playhead ' + hhmm(playhead);
+  $('libList').querySelectorAll('.add').forEach(b => b.title = `Add at the playhead (${hhmm(playhead)})`);
+}
+
+function toggleMute(id){
+  commit();
+  const i = project.muted_tracks.indexOf(id);
+  if (i >= 0) project.muted_tracks.splice(i, 1); else project.muted_tracks.push(id);
+  afterChange();
+}
+
+// drag / trim with snapping and magnet to neighbours.
+// The timeline DOM is NOT rebuilt while a drag is live — rebuilding would
+// destroy the element holding the pointer capture — so the clip is moved
+// in place and the full redraw waits for pointerup.
+let dragging = false;
+function startDrag(ev, type, id, el){
+  ev.stopPropagation();
+  const obj = type === 'clip' ? project.clips.find(c => c.id === id) : project.transitions.find(t => t.id === id);
+  if (!obj) return;
+  sel = {type, id};
+  $('tl').querySelectorAll('.sel').forEach(n => n.classList.remove('sel'));
+  el.classList.add('sel');
+  drawInspector();
+  const mode = ev.target.classList.contains('h') ? (ev.target.classList.contains('l') ? 'trim-l' : 'trim-r') : 'move';
+  const startX = ev.clientX, startY = ev.clientY;
+  const orig = {start: obj.start, duration: obj.duration, track: obj.track};
+  const laneH = el.parentElement.getBoundingClientRect().height;
+  const laneIndex = t => LIB.tracks.findIndex(x => x.id === t);
+  let moved = false;
+  commit();
+  dragging = true;
+  el.setPointerCapture(ev.pointerId);
+  el.style.zIndex = 10;
+  const magnets = [];
+  for (const c of project.clips) if (!(type === 'clip' && c.id === id)) magnets.push(c.start, c.start + c.duration);
+  for (const t of project.transitions) if (!(type === 'tr' && t.id === id)) magnets.push(t.start, t.start + t.duration);
+  magnets.push(playhead);
+  const magnet = m => { let best = m, dist = MAGNET_PX / pxPerMin; for (const g of magnets){ const d = Math.abs(g - m); if (d < dist){ dist = d; best = g; } } return best; };
+  const paint = () => {
+    el.style.left = xOf(obj.start) + 'px';
+    el.style.width = Math.max(type === 'clip' ? 28 : 30, xOf(obj.start + obj.duration) - xOf(obj.start)) + 'px';
+    if (type === 'clip') el.style.transform = `translateY(${(laneIndex(obj.track) - laneIndex(orig.track)) * laneH}px)`;
+    else el.childNodes[1].textContent = `${trKind(obj.kind).name} ${hhmm(obj.start)}–${hhmm(obj.start + obj.duration)}`;
+    const s = $('iStart'), d = $('iDur'), tr = $('iTrack');
+    if (s) s.value = hhmm(obj.start); if (d) d.value = obj.duration; if (tr) tr.value = obj.track;
+  };
+  el.onpointermove = e2 => {
+    const dm = (e2.clientX - startX) / pxPerMin;
+    if (Math.abs(e2.clientX - startX) > 2 || Math.abs(e2.clientY - startY) > 2) moved = true;
+    if (mode === 'move'){
+      const s = magnet(Math.round((orig.start + dm) / SNAP) * SNAP);
+      obj.start = clamp(s, LIB.day_start, LIB.day_end - obj.duration);
+      if (type === 'clip'){
+        const under = document.elementsFromPoint(e2.clientX, e2.clientY).find(n => n.classList && n.classList.contains('lane'));
+        if (under && under.dataset.lane !== 'events' && under.dataset.lane !== obj.track) obj.track = under.dataset.lane;
+      }
+    } else if (mode === 'trim-r'){
+      const end = magnet(Math.round((orig.start + orig.duration + dm) / SNAP) * SNAP);
+      obj.duration = clamp(end - obj.start, SNAP, LIB.day_end - obj.start);
+    } else {
+      const s = clamp(magnet(Math.round((orig.start + dm) / SNAP) * SNAP), LIB.day_start, orig.start + orig.duration - SNAP);
+      obj.duration = orig.start + orig.duration - s; obj.start = s;
+    }
+    paint();
+    requestRender(150);
+  };
+  el.onpointerup = el.onpointercancel = () => {
+    el.onpointermove = null;
+    dragging = false;
+    if (!moved){ history.pop(); updateUndo(); }   // a click, not a move — don't record an undo step
+    afterChange();
+  };
+}
+
+// ------------------------------------------------------------ inspector --
+function drawInspector(){
+  const box = $('inspector');
+  const obj = findSel();
+  if (!obj){
+    $('inspTitle').textContent = 'Inspector';
+    box.innerHTML = `<p class="help">Select a clip to edit its portion and effects.</p>
+      <p class="help"><b>How it works</b><br>The day is the timeline. Each <b>track</b> is one part of the plate. Drag an ingredient from the library onto a track (or press <b>+</b> to place it at the playhead) — that's a <b>clip</b>. Clips that sit close together become one <b>meal</b>.</p>
+      <p class="help"><b>Effects</b> are how the clip is prepared — grilled, pan-fried, a cheese topping — and they change the macros the way an effect changes a picture. <b>Between meals</b> holds training, walks, fasting windows and sleep: they shape the timing notes, never the plan.</p>
+      <p class="help"><b>Render</b> produces the finished day: every meal with the macro math shown, the check against the daily targets (±${LIB.tolerance.calories_kcal} kcal / ±${LIB.tolerance.protein_g} g protein), and a plan document you can export.</p>
+      <p class="help"><kbd>drag</kbd> move · <kbd>edges</kbd> trim · <kbd>Del</kbd> delete · <kbd>Ctrl+D</kbd> duplicate · <kbd>Ctrl+Z</kbd>/<kbd>Y</kbd> undo/redo · <kbd>+</kbd>/<kbd>−</kbd> zoom · <kbd>M</kbd> mute selected track · <kbd>Ctrl+Enter</kbd> render</p>`;
+    return;
+  }
+  if (sel.type === 'tr'){
+    const k = trKind(obj.kind);
+    $('inspTitle').textContent = 'Between meals';
+    box.innerHTML = `
+      <div class="field"><label>kind</label><select id="iKind">${LIB.transition_kinds.map(x => `<option value="${x.id}" ${x.id === obj.kind ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>starts</label><div class="row"><input type="time" id="iStart" value="${hhmm(obj.start)}" step="300"></div></div>
+      <div class="field"><label>length (min)</label><div class="row"><input type="number" id="iDur" value="${obj.duration}" min="5" step="5"></div></div>
+      <p class="help">${esc(k.name)} ${hhmm(obj.start)}–${hhmm(obj.start + obj.duration)}. ${
+        k.id === 'training' ? 'Render checks for carbs in the 3 h before and protein in the 2 h after.' :
+        k.id === 'sleep' ? 'Render flags any meal ending under 2 h before this.' :
+        k.id === 'fast' ? 'Render flags any meal that overlaps this window.' : 'A walk after a meal — no macro effect, just a good habit.'}</p>
+      <div class="btnrow"><button id="iDel">Delete</button></div>`;
+    $('iKind').onchange = e => edit(() => { obj.kind = e.target.value; });
+    $('iStart').onchange = e => { const m = parseHHMM(e.target.value); if (m !== null) edit(() => { obj.start = snapMin(m); }); };
+    $('iDur').onchange = e => edit(() => { obj.duration = Math.max(5, +e.target.value || 5); });
+    $('iDel').onclick = deleteSelected;
+    return;
+  }
+  const i = ing(obj.ingredient);
+  const item = lastRender && lastRender.meals.flatMap(m => m.items).find(it => it.clip_id === obj.id);
+  const cookFx = obj.effects.filter(e => effect(e) && effect(e).group === 'cook');
+  const maxG = Math.max(500, i.default_g * 3);
+  $('inspTitle').textContent = 'Clip';
+  box.innerHTML = `
+    <div style="margin-top:8px"><b style="font-size:15px">${esc(i.name)}</b><br><span class="muted">per 100 g: ${i.kcal} kcal · ${i.protein_g} g P · ${i.carbs_g} g C · ${i.fat_g} g F${i.tags.length ? '<br>' + esc(i.tags.join(', ')) : ''}</span></div>
+    <div class="field"><label>portion</label>
+      <input type="range" id="iGramsR" min="0" max="${maxG}" step="5" value="${obj.grams}">
+      <div class="row"><input type="number" id="iGrams" value="${obj.grams}" min="0" step="5"> <span class="muted">g</span>
+        <button class="icon" id="iDefault" title="reset to the library default (${i.default_g} g)">↺</button></div></div>
+    <div class="field"><label>effects</label>
+      <div class="fxlist" id="fxList">${obj.effects.map(e => { const f = effect(e); return f ? `<span class="fx"><b>${esc(f.name)}</b><small>${esc(f.hint)}</small><button class="icon" data-rmfx="${f.id}" title="remove">✕</button></span>` : ''; }).join('') || '<span class="muted" style="font-size:12px">none — served as is</span>'}</div>
+      <div class="row" style="margin-top:6px"><select id="iAddFx"><option value="">+ add effect…</option>
+        <optgroup label="Preparation (one per clip)">${LIB.effects.filter(e => e.group === 'cook').map(e => `<option value="${e.id}">${esc(e.name)} — ${esc(e.hint)}</option>`).join('')}</optgroup>
+        <optgroup label="Finish (stackable)">${LIB.effects.filter(e => e.group === 'finish' && !obj.effects.includes(e.id)).map(e => `<option value="${e.id}">${esc(e.name)} — ${esc(e.hint)}</option>`).join('')}</optgroup>
+      </select></div></div>
+    <div class="field"><label>placement</label>
+      <div class="row"><input type="time" id="iStart" value="${hhmm(obj.start)}" step="300"> <span class="muted">for</span> <input type="number" id="iDur" value="${obj.duration}" min="5" step="5"> <span class="muted">min</span></div>
+      <div class="row" style="margin-top:6px"><select id="iTrack">${LIB.tracks.map(t => `<option value="${t.id}" ${t.id === obj.track ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></div></div>
+    ${item ? `<div class="field"><label>this clip</label><div class="kv">
+      <span>calories</span><span><b>${item.macros.kcal}</b> kcal</span>
+      <span>protein</span><span><b>${item.macros.protein_g}</b> g</span>
+      <span>carbs</span><span>${item.macros.carbs_g} g</span>
+      <span>fat</span><span>${item.macros.fat_g} g</span></div>
+      ${item.warnings.length ? `<div class="warnbox">⚠ ${esc(item.warnings.join('. '))}</div>` : ''}</div>` :
+      `<div class="field"><label>this clip</label><span class="muted">${effectiveMuted().includes(obj.track) ? 'track is muted — not counted' : 'rendering…'}</span></div>`}
+    <div class="btnrow"><button id="iDup" title="Ctrl+D">Duplicate</button><button id="iDel" title="Delete">Delete</button></div>`;
+  const setGrams = v => { obj.grams = clamp(Math.round(v / 5) * 5, 0, 5000); $('iGrams').value = obj.grams; $('iGramsR').value = obj.grams; drawTimeline(); requestRender(120); };
+  $('iGramsR').oninput = e => setGrams(+e.target.value);
+  $('iGramsR').onpointerdown = () => commit();
+  $('iGramsR').onchange = () => afterChange();
+  $('iGrams').onchange = e => edit(() => { obj.grams = clamp(Math.round((+e.target.value || 0) / 5) * 5, 0, 5000); });
+  $('iDefault').onclick = () => edit(() => { obj.grams = i.default_g; });
+  $('iStart').onchange = e => { const m = parseHHMM(e.target.value); if (m !== null) edit(() => { obj.start = snapMin(m); }); };
+  $('iDur').onchange = e => edit(() => { obj.duration = Math.max(5, +e.target.value || 5); });
+  $('iTrack').onchange = e => edit(() => { obj.track = e.target.value; });
+  $('iAddFx').onchange = e => { const f = effect(e.target.value); if (!f) return;
+    edit(() => { if (f.group === 'cook') obj.effects = obj.effects.filter(x => !(effect(x) && effect(x).group === 'cook'));
+                 if (!obj.effects.includes(f.id)) obj.effects.push(f.id); }); };
+  box.querySelectorAll('[data-rmfx]').forEach(b => b.onclick = () => edit(() => { obj.effects = obj.effects.filter(x => x !== b.dataset.rmfx); }));
+  $('iDup').onclick = duplicateSelected;
+  $('iDel').onclick = deleteSelected;
+}
+function edit(fn){ commit(); fn(); afterChange(); }
+function deleteSelected(){
+  const obj = findSel(); if (!obj) return;
+  commit();
+  if (sel.type === 'clip') project.clips = project.clips.filter(c => c.id !== obj.id);
+  else project.transitions = project.transitions.filter(t => t.id !== obj.id);
+  sel = null; afterChange();
+}
+function duplicateSelected(){
+  const obj = findSel(); if (!obj || sel.type !== 'clip') return;
+  commit();
+  const copy = JSON.parse(JSON.stringify(obj)); copy.id = newId('c'); copy.start = snapMin(obj.start + obj.duration);
+  project.clips.push(copy); sel = {type: 'clip', id: copy.id}; afterChange();
+}
+
+// --------------------------------------------------------------- render --
+let renderTimer = null, renderSeq = 0;
+function requestRender(delay = 60){ clearTimeout(renderTimer); renderTimer = setTimeout(doRender, delay); }
+function renderBody(){
+  return {profile: prof(), project: {clips: project.clips, transitions: project.transitions, muted_tracks: effectiveMuted()}};
+}
+async function doRender(){
+  const seq = ++renderSeq;
+  let data;
+  try{
+    const res = await fetch('/api/render', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(renderBody())});
+    data = await res.json();
+  }catch(e){ data = {error: String(e)}; }
+  if (seq !== renderSeq) return;          // a newer render is in flight
+  if (data.error){ $('statusChip').className = 'chip bad'; $('statusChip').textContent = 'error: ' + data.error; return; }
+  lastRender = data;
+  drawMonitor();
+  if (dragging) return;                   // the timeline is rebuilt on pointerup
+  drawTimeline(); drawInspector();
+  if ($('renderPanel').classList.contains('show')) drawRenderPanel();
+}
+function meter(el, name, value, unit, target, band){
+  let bar = '';
+  if (target){
+    const scale = Math.max(target * 1.3, value * 1.05);
+    const pct = v => clamp(v / scale * 100, 0, 100);
+    const gap = value - target;
+    const cls = Math.abs(gap) <= band ? '' : (gap > 0 ? 'over' : 'bad');
+    bar = `<div class="bar"><div class="band" style="left:${pct(target - band)}%;width:${pct(target + band) - pct(target - band)}%"></div>
+           <div class="fill ${cls}" style="width:${pct(value)}%"></div><div class="tick" style="left:${pct(target)}%"></div></div>`;
+  } else {
+    bar = `<div class="bar"><div class="fill" style="width:${clamp(value / 400 * 100, 0, 100)}%;background:var(--indigo)"></div></div>`;
+  }
+  el.innerHTML = `<div class="lbl"><span>${name}</span><span><b>${value}</b> ${unit}${target ? ` <span class="muted">/ ${target}</span>` : ''}</span></div>${bar}`;
+}
+function drawMonitor(){
+  const r = lastRender; if (!r) return;
+  const t = r.targets;
+  meter($('mKcal'), 'calories', r.totals.kcal, 'kcal', t && t.calories_kcal, r.tolerance.calories_kcal);
+  meter($('mProt'), 'protein', r.totals.protein_g, 'g', t && t.protein_g, r.tolerance.protein_g);
+  meter($('mCarb'), 'carbs', r.totals.carbs_g, 'g', null);
+  meter($('mFat'), 'fat', r.totals.fat_g, 'g', null);
+  const chip = $('statusChip');
+  if (!t){ chip.className = 'chip'; chip.textContent = 'no targets'; }
+  else if (r.within_tolerance){ chip.className = 'chip ok'; chip.textContent = `✔ within tolerance (${r.gaps.kcal >= 0 ? '+' : ''}${r.gaps.kcal} kcal, ${r.gaps.protein_g >= 0 ? '+' : ''}${r.gaps.protein_g} g P)`; }
+  else { chip.className = 'chip warn'; chip.textContent = `outside band: ${r.gaps.kcal >= 0 ? '+' : ''}${r.gaps.kcal} kcal, ${r.gaps.protein_g >= 0 ? '+' : ''}${r.gaps.protein_g} g protein`; }
+  $('mealChips').innerHTML = r.meals.map(m => `<span class="chip" data-goto="${m.start}" title="${m.items.map(i => i.name + ' ' + i.grams + ' g').join(', ')}">${esc(m.label)} <span class="muted">${m.time}</span> · ${m.totals.kcal} kcal · ${m.totals.protein_g} g P${m.notes.length ? ' <span style="color:var(--amber)">·</span>' : ''}</span>`).join('') +
+    (r.meals.length ? '' : '<span class="muted">no meals yet — drop an ingredient on a track</span>');
+  $('mealChips').querySelectorAll('[data-goto]').forEach(c => c.onclick = () => { setPlayhead(+c.dataset.goto); $('tlWrap').scrollTo({left: Math.max(0, xOf(playhead) - 200), behavior: 'smooth'}); });
+}
+function drawRenderPanel(){
+  const r = lastRender; if (!r) return;
+  $('rpSummary').textContent = `${r.meals.length} meal(s) · ${r.totals.kcal} kcal · ${r.totals.protein_g} g protein · ${r.totals.carbs_g} g carbs · ${r.totals.fat_g} g fat`;
+  $('rpMeals').innerHTML = r.meals.map(m => `<div class="meal-card"><h4><span>${esc(m.label)}</span><span>${m.time} · ${m.totals.kcal} kcal · ${m.totals.protein_g} g P · ${m.totals.carbs_g} g C · ${m.totals.fat_g} g F</span></h4>
+    <table><tr><th>ingredient</th><th>portion</th><th>effects</th><th>kcal</th><th>P</th><th>C</th><th>F</th></tr>
+    ${m.items.map(i => `<tr><td><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${track(i.track).color};margin-right:6px"></i>${esc(i.name)}${i.warnings.length ? ` <span title="${esc(i.warnings.join('; '))}" style="color:var(--red)">⚠</span>` : ''}</td>
+      <td>${i.grams} g</td><td style="text-align:left;color:var(--muted)">${esc(i.effects.join(', ')) || '—'}</td><td>${i.macros.kcal}</td><td>${i.macros.protein_g}</td><td>${i.macros.carbs_g}</td><td>${i.macros.fat_g}</td></tr>`).join('')}
+    </table>${m.notes.map(n => `<div class="note warn">${esc(n)}</div>`).join('')}</div>`).join('') || '<p class="muted">Nothing on the timeline.</p>';
+  $('rpNotes').innerHTML = `<h4 style="margin:0 0 4px">Check</h4>` + r.notes.map(n => `<div class="note ${n.level}">${esc(n.text)}</div>`).join('');
+  $('exportMd').value = r.export_markdown || '';
+}
+
+// ------------------------------------------------------------- controls --
+$('undoBtn').onclick = undo;
+$('redoBtn').onclick = redo;
+$('zoomIn').onclick = () => zoom(1.25);
+$('zoomOut').onclick = () => zoom(0.8);
+$('zoomFit').onclick = () => { const w = $('tlWrap').clientWidth - parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--head-w')) - 4;
+  pxPerMin = clamp(w / (LIB.day_end - LIB.day_start), 0.5, 5); drawTimeline(); };
+function zoom(f){ pxPerMin = clamp(pxPerMin * f, 0.5, 5); drawTimeline(); }
+$('demoSel').onchange = () => { const k = $('demoSel').value; $('demoSel').value = ''; if (!k) return; loadDemo(k); afterChange(); toast('Demo day loaded'); };
+$('clearBtn').onclick = () => { if (!project.clips.length && !project.transitions.length) return; commit(); project = {profile: prof(), clips: [], transitions: [], muted_tracks: []}; sel = null; afterChange(); };
+$('renderBtn').onclick = async () => { await doRender(); $('renderPanel').classList.add('show'); drawRenderPanel(); $('renderPanel').scrollIntoView({behavior: 'smooth'}); };
+$('rpClose').onclick = () => $('renderPanel').classList.remove('show');
+$('copyMd').onclick = async () => { try{ await navigator.clipboard.writeText($('exportMd').value); toast('Plan copied'); }catch(e){ $('exportMd').select(); toast('Select-all and copy'); } };
+const slug = () => (prof().name || 'client').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'client';
+$('dlMd').onclick = () => download(`meal-day-${slug()}.md`, $('exportMd').value, 'text/markdown');
+$('saveJson').onclick = () => download(`meal-project-${slug()}.json`, JSON.stringify(project, null, 2), 'application/json');
+$('loadJson').onchange = ev => { const f = ev.target.files[0]; if (!f) return; const rd = new FileReader();
+  rd.onload = () => { try{ const d = JSON.parse(rd.result); if (!Array.isArray(d.clips)) throw new Error('not a project file');
+    commit(); project = {profile: {...DEFAULT_PROFILE, ...(d.profile || {})}, clips: d.clips, transitions: d.transitions || [], muted_tracks: d.muted_tracks || []}; sel = null; drawLibrary(); afterChange(); toast('Project loaded'); }
+    catch(e){ toast('Could not load: ' + e.message); } };
+  rd.readAsText(f); ev.target.value = ''; };
+function download(name, text, type){ const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+
+document.addEventListener('keydown', ev => {
+  const inField = /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName);
+  if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter'){ ev.preventDefault(); $('renderBtn').click(); return; }
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z'){ ev.preventDefault(); ev.shiftKey ? redo() : undo(); return; }
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'y'){ ev.preventDefault(); redo(); return; }
+  if (inField) return;
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'd'){ ev.preventDefault(); duplicateSelected(); }
+  else if (ev.key === 'Delete' || ev.key === 'Backspace'){ ev.preventDefault(); deleteSelected(); }
+  else if (ev.key === 'Escape'){ sel = null; drawTimeline(); drawInspector(); }
+  else if (ev.key === '+' || ev.key === '='){ zoom(1.25); }
+  else if (ev.key === '-'){ zoom(0.8); }
+  else if (ev.key.toLowerCase() === 'm'){ const o = findSel(); if (o && sel.type === 'clip') toggleMute(o.track); }
+  else if (ev.key === 'Home'){ setPlayhead(LIB.day_start); $('tlWrap').scrollTo({left: 0}); }
+  else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight'){ const o = findSel(); const d = (ev.key === 'ArrowLeft' ? -1 : 1) * (ev.shiftKey ? 15 : SNAP);
+    if (o) edit(() => { o.start = clamp(o.start + d, LIB.day_start, LIB.day_end - o.duration); }); else setPlayhead(playhead + d); }
+});
+
+loadLibrary();
+</script>
+</body>
+</html>

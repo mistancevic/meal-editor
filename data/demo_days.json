@@ -1,0 +1,52 @@
+{
+  "_comment": "Demo projects: a baseline day per sample client so the timeline is not empty on first load. Times are minutes since midnight; grams are as-served portions. The profile travels with the project.",
+  "muscle-gain": {
+    "profile": {"name": "Alex", "goal": "lean muscle gain under a calorie ceiling", "calories_kcal": 2400, "protein_g": 160,
+                "restrictions": [], "dislikes": ["lentil"], "usual_bedtime": "23:00", "training_tomorrow": true},
+    "clips": [
+      {"id": "d1", "ingredient": "oats", "track": "carbs", "start": 450, "duration": 30, "grams": 70, "effects": ["steamed"]},
+      {"id": "d2", "ingredient": "whey", "track": "protein", "start": 450, "duration": 30, "grams": 30, "effects": []},
+      {"id": "d3", "ingredient": "berries", "track": "extras", "start": 450, "duration": 30, "grams": 100, "effects": []},
+      {"id": "d4", "ingredient": "milk", "track": "extras", "start": 470, "duration": 30, "grams": 200, "effects": []},
+      {"id": "d5", "ingredient": "chicken_breast", "track": "protein", "start": 750, "duration": 30, "grams": 150, "effects": ["grilled", "seasoned"]},
+      {"id": "d6", "ingredient": "white_rice", "track": "carbs", "start": 750, "duration": 30, "grams": 250, "effects": []},
+      {"id": "d7", "ingredient": "broccoli", "track": "veg", "start": 750, "duration": 30, "grams": 150, "effects": ["steamed"]},
+      {"id": "d8", "ingredient": "olive_oil", "track": "fats", "start": 750, "duration": 30, "grams": 10, "effects": []},
+      {"id": "d9", "ingredient": "skyr", "track": "protein", "start": 960, "duration": 20, "grams": 200, "effects": []},
+      {"id": "d10", "ingredient": "banana", "track": "extras", "start": 960, "duration": 20, "grams": 120, "effects": []},
+      {"id": "d11", "ingredient": "salmon", "track": "protein", "start": 1170, "duration": 30, "grams": 180, "effects": ["baked"]},
+      {"id": "d12", "ingredient": "potatoes", "track": "carbs", "start": 1170, "duration": 30, "grams": 300, "effects": ["steamed"]},
+      {"id": "d13", "ingredient": "salad_leaves", "track": "veg", "start": 1170, "duration": 30, "grams": 100, "effects": []},
+      {"id": "d14", "ingredient": "olive_oil", "track": "fats", "start": 1170, "duration": 30, "grams": 15, "effects": []}
+    ],
+    "transitions": [
+      {"id": "t1", "kind": "training", "start": 1050, "duration": 60},
+      {"id": "t2", "kind": "sleep", "start": 1380, "duration": 60}
+    ],
+    "muted_tracks": []
+  },
+  "fat-loss": {
+    "profile": {"name": "Maya", "goal": "fat loss with steady energy through long workdays", "calories_kcal": 1800, "protein_g": 120,
+                "restrictions": ["lactose"], "dislikes": ["jerky"], "usual_bedtime": "22:30", "training_tomorrow": false},
+    "clips": [
+      {"id": "d1", "ingredient": "eggs", "track": "protein", "start": 420, "duration": 30, "grams": 120, "effects": ["pan_fried"]},
+      {"id": "d2", "ingredient": "wholewheat_bread", "track": "carbs", "start": 420, "duration": 30, "grams": 60, "effects": []},
+      {"id": "d3", "ingredient": "spinach", "track": "veg", "start": 420, "duration": 30, "grams": 80, "effects": []},
+      {"id": "d4", "ingredient": "tofu", "track": "protein", "start": 750, "duration": 30, "grams": 200, "effects": ["pan_fried", "seasoned"]},
+      {"id": "d5", "ingredient": "quinoa", "track": "carbs", "start": 750, "duration": 30, "grams": 180, "effects": []},
+      {"id": "d6", "ingredient": "bell_pepper", "track": "veg", "start": 750, "duration": 30, "grams": 120, "effects": []},
+      {"id": "d7", "ingredient": "soy_sauce", "track": "fats", "start": 750, "duration": 30, "grams": 15, "effects": []},
+      {"id": "d8", "ingredient": "apple", "track": "extras", "start": 960, "duration": 20, "grams": 150, "effects": []},
+      {"id": "d9", "ingredient": "almonds", "track": "fats", "start": 960, "duration": 20, "grams": 25, "effects": []},
+      {"id": "d10", "ingredient": "salmon", "track": "protein", "start": 1140, "duration": 30, "grams": 150, "effects": ["grilled"]},
+      {"id": "d11", "ingredient": "sweet_potato", "track": "carbs", "start": 1140, "duration": 30, "grams": 200, "effects": ["baked"]},
+      {"id": "d12", "ingredient": "green_beans", "track": "veg", "start": 1140, "duration": 30, "grams": 150, "effects": ["steamed"]},
+      {"id": "d13", "ingredient": "olive_oil", "track": "fats", "start": 1140, "duration": 30, "grams": 8, "effects": []}
+    ],
+    "transitions": [
+      {"id": "t1", "kind": "walk", "start": 1200, "duration": 30},
+      {"id": "t2", "kind": "sleep", "start": 1350, "duration": 60}
+    ],
+    "muted_tracks": []
+  }
+}
